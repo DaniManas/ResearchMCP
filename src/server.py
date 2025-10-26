@@ -70,6 +70,40 @@ def get_paper_abstract(paper_id: str) -> str:
 
     return result
 
+@mcp.tool()
+def extract_claims(paper_id: str) -> str:
+    """
+    Extract key claims and findings from a paper's abstract.
+
+    Args:
+        paper_id: The OpenAlex paper ID
+
+    Returns:
+        Structured list of claims extracted from the paper
+    """
+    paper = fetcher.fetch_paper_by_id(paper_id)
+
+    if "error" in paper:
+        return paper["error"]
+
+    abstract_text = fetcher.get_paper_abstract(paper)
+
+    if abstract_text == "No abstract available":
+        return "Cannot extract claims: No abstract available for this paper"
+
+    result = f"**Paper:** {paper['title']}\n"
+    result += f"**Authors:** {paper['authors']}\n"
+    result += f"**Year:** {paper['publication_year']}\n\n"
+    result += f"**Abstract:**\n{abstract_text}\n\n"
+    result += f"**Instructions for claim extraction:**\n"
+    result += f"Please analyze the abstract above and extract:\n"
+    result += f"1. Main research question or hypothesis\n"
+    result += f"2. Key methodology or approach\n"
+    result += f"3. Primary findings or results\n"
+    result += f"4. Main conclusions or implications\n"
+
+    return result
+
 
 if __name__ == "__main__":
     mcp.run()
