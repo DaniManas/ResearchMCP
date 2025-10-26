@@ -104,6 +104,55 @@ def extract_claims(paper_id: str) -> str:
 
     return result
 
+@mcp.tool()
+def compare_papers(paper_ids: str) -> str:
+    """
+    Compare claims across multiple papers to find contradictions and consensus.
+
+    Args:
+        paper_ids: Comma-separated list of OpenAlex paper IDs (e.g., "W123,W456,W789")
+
+    Returns:
+        Abstracts from all papers for comparison analysis
+    """
+    ids = [pid.strip() for pid in paper_ids.split(",")]
+
+    if len(ids) < 2:
+        return "Error: Please provide at least 2 paper IDs separated by commas"
+
+    if len(ids) > 5:
+        return "Error: Maximum 5 papers can be compared at once"
+
+    papers_data = []
+    for paper_id in ids:
+        paper = fetcher.fetch_paper_by_id(paper_id)
+
+        if "error" in paper:
+            papers_data.append(f"**Error fetching {paper_id}:** {paper['error']}\n")
+            continue
+
+        abstract_text = fetcher.get_paper_abstract(paper)
+
+        paper_info = f"**Paper {len(papers_data) + 1}:**\n"
+        paper_info += f"Title: {paper['title']}\n"
+        paper_info += f"Authors: {paper['authors']}\n"
+        paper_info += f"Year: {paper['publication_year']}\n"
+        paper_info += f"Citations: {paper['cited_by_count']}\n\n"
+        paper_info += f"Abstract: {abstract_text}\n"
+        paper_info += f"{'-' * 80}\n\n"
+
+        papers_data.append(paper_info)
+
+    result = f"**Comparing {len(papers_data)} papers:**\n\n"
+    result += "".join(papers_data)
+    result += "\n**Analysis Instructions:**\n"
+    result += "Please analyze these papers and identify:\n"
+    result += "1. **Contradictions:** Where do the papers disagree or present conflicting findings?\n"
+    result += "2. **Consensus:** What do the papers agree on?\n"
+    result += "3. **Gaps:** What questions remain unanswered or areas need more research?\n"
+
+    return result
+
 
 if __name__ == "__main__":
     mcp.run()
