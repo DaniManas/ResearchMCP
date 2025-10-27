@@ -153,6 +153,122 @@ def compare_papers(paper_ids: str) -> str:
 
     return result
 
+@mcp.tool()
+def get_citations(paper_id: str, direction: str = "both", max_results: int = 10) -> str:
+    """
+    Get citation network for a paper - see what cites it and what it cites.
+
+    Args:
+        paper_id: The OpenAlex paper ID
+        direction: "cited_by" (papers citing this), "references" (papers this cites), or "both"
+        max_results: Maximum number of citations to return per direction (default: 10)
+
+    Returns:
+        Citation network information with paper details
+    """
+    paper = fetcher.fetch_paper_by_id(paper_id)
+
+    if "error" in paper:
+        return paper["error"]
+
+    result = f"**Citation Network for:** {paper['title']}\n"
+    result += f"**Authors:** {paper['authors']}\n"
+    result += f"**Year:** {paper['publication_year']}\n"
+    result += f"**Total Citations:** {paper['cited_by_count']}\n\n"
+
+    if direction in ["cited_by", "both"]:
+        cited_by_papers = fetcher.get_cited_by_papers(paper_id, max_results)
+        
+        if cited_by_papers and "error" not in cited_by_papers[0]:
+            result += f"**📈 Papers Citing This Work ({len(cited_by_papers)} shown):**\n\n"
+            for i, citing_paper in enumerate(cited_by_papers, 1):
+                result += f"{i}. **{citing_paper['title']}**\n"
+                result += f"   Authors: {citing_paper['authors']}\n"
+                result += f"   Year: {citing_paper['publication_year']}\n"
+                result += f"   Citations: {citing_paper['cited_by_count']}\n"
+                result += f"   ID: {citing_paper['id']}\n\n"
+        else:
+            result += "No citing papers found or error fetching citations.\n\n"
+
+    if direction in ["references", "both"]:
+        references = fetcher.get_references(paper_id, max_results)
+        
+        if references and "error" not in references[0]:
+            result += f"**📚 Papers This Work References ({len(references)} shown):**\n\n"
+            for i, ref_paper in enumerate(references, 1):
+                result += f"{i}. **{ref_paper['title']}**\n"
+                result += f"   Authors: {ref_paper['authors']}\n"
+                result += f"   Year: {ref_paper['publication_year']}\n"
+                result += f"   Citations: {ref_paper['cited_by_count']}\n"
+                result += f"   ID: {ref_paper['id']}\n\n"
+        else:
+            result += "No references found or error fetching references.\n\n"
+
+    return result
+
+@mcp.tool()
+def find_research_gaps(query: str, num_papers: int = 5) -> str:
+    """
+    Analyze multiple papers on a topic to identify research gaps and unanswered questions.
+
+    Args:
+        query: Research topic to analyze
+        num_papers: Number of papers to analyze (default: 5, max: 10)
+
+    Returns:
+        Analysis of research gaps, limitations, and future research directions
+    """
+    if num_papers > 10:
+        num_papers = 10
+
+    papers = fetcher.search_papers(query=query, max_results=num_papers, sort_by="cited_by_count")
+
+    if papers and "error" in papers[0]:
+        return papers[0]["error"]
+
+    if not papers:
+        return f"No papers found for query: {query}"
+
+    result = f"**Research Gap Analysis for: '{query}'**\n"
+    result += f"**Analyzing {len(papers)} highly-cited papers**\n\n"
+
+    result += "**Papers Analyzed:**\n"
+    paper_ids = []
+    for i, paper in enumerate(papers, 1):
+        result += f"{i}. {paper['title']} ({paper['publication_year']}) - {paper['cited_by_count']} citations\n"
+        paper_ids.append(paper['id'])
+
+    result += "\n**Fetching abstracts for deep analysis...**\n\n"
+
+    abstracts_data = []
+    for i, paper_id in enumerate(paper_ids, 1):
+        paper_detail = fetcher.fetch_paper_by_id(paper_id)
+        if "error" not in paper_detail:
+            abstract_text = fetcher.get_paper_abstract(paper_detail)
+            abstracts_data.append(f"**Paper {i}:** {paper_detail['title']}\n{abstract_text}\n")
+
+    result += "".join(abstracts_data)
+
+    result += "\n**Gap Analysis Instructions:**\n"
+    result += "Based on the abstracts above, please identify:\n\n"
+    result += "1. **Unanswered Research Questions:**\n"
+    result += "   - What questions do these papers raise but not answer?\n"
+    result += "   - What do the authors suggest for future research?\n\n"
+    result += "2. **Methodological Limitations:**\n"
+    result += "   - What limitations do the authors acknowledge?\n"
+    result += "   - What methods or approaches are missing?\n\n"
+    result += "3. **Understudied Areas:**\n"
+    result += "   - What aspects of the topic receive less attention?\n"
+    result += "   - What populations, contexts, or scenarios are not covered?\n\n"
+    result += "4. **Contradictions & Inconsistencies:**\n"
+    result += "   - Where do findings conflict?\n"
+    result += "   - What requires further investigation to resolve?\n\n"
+    result += "5. **Emerging Opportunities:**\n"
+    result += "   - What new research directions are suggested?\n"
+    result += "   - What interdisciplinary connections could be made?\n"
+
+    return result
+
 
 if __name__ == "__main__":
     mcp.run()

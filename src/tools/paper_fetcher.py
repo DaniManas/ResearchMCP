@@ -138,6 +138,87 @@ class PaperFetcher:
         abstract = " ".join([word for _, word in word_positions])
 
         return abstract
+    def get_cited_by_papers(self, paper_id: str, max_results: int = 10) -> List[Dict]:
+        """
+        Get papers that cite this paper (forward citations).
+
+        Args:
+            paper_id: The OpenAlex paper ID
+            max_results: Maximum number of citing papers to return
+
+        Returns:
+            List of papers that cite this paper
+        """
+        try:
+            paper_id = paper_id.strip()
+            if "openalex.org/" in paper_id:
+                work_id = paper_id.split("/")[-1]
+            else:
+                work_id = paper_id
+
+            url = f"{self.BASE_URL}/works"
+            params = {
+                "filter": f"cites:{work_id}",
+                "per_page": max_results,
+                "sort": "cited_by_count:desc"
+            }
+
+            response = self.client.get(url, params=params)
+            
+            if response.status_code != 200:
+                return [{"error": f"Failed to fetch citations: Status {response.status_code}"}]
+
+            data = response.json()
+            papers = []
+            for work in data.get("results", []):
+                paper = self._parse_paper(work)
+                papers.append(paper)
+
+            return papers
+
+        except Exception as e:
+            return [{"error": f"Error fetching citations: {str(e)}"}]
+
+    def get_references(self, paper_id: str, max_results: int = 10) -> List[Dict]:
+        """
+        Get papers that this paper references (backward citations).
+
+        Args:
+            paper_id: The OpenAlex paper ID
+            max_results: Maximum number of references to return
+
+        Returns:
+            List of papers this paper references
+        """
+        try:
+            paper_id = paper_id.strip()
+            if "openalex.org/" in paper_id:
+                work_id = paper_id.split("/")[-1]
+            else:
+                work_id = paper_id
+
+            url = f"{self.BASE_URL}/works"
+            params = {
+                "filter": f"cited_by:{work_id}",
+                "per_page": max_results,
+                "sort": "cited_by_count:desc"
+            }
+
+            response = self.client.get(url, params=params)
+            
+            if response.status_code != 200:
+                return [{"error": f"Failed to fetch references: Status {response.status_code}"}]
+
+            data = response.json()
+            papers = []
+            for work in data.get("results", []):
+                paper = self._parse_paper(work)
+                papers.append(paper)
+
+            return papers
+
+        except Exception as e:
+            return [{"error": f"Error fetching references: {str(e)}"}]
 
     def close(self):
         """Close the HTTP client"""
