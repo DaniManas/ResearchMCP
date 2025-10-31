@@ -2,6 +2,10 @@
 
 An MCP (Model Context Protocol) server that helps analyze academic papers by fetching research from OpenAlex's database of 250M+ papers.
 
+<a href="https://glama.ai/mcp/servers/@DaniManas/ResearchMCP">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@DaniManas/ResearchMCP/badge" alt="ResearchMCP MCP server" />
+</a>
+
 ## Features
 
 - **Search Papers**: Search for academic papers by topic/keywords with advanced filtering
